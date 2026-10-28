@@ -62,7 +62,7 @@ Partial update operations use **PATCH** method (ex: PATCH `/products/{productId}
 Delete operations use **DELETE** method (ex: DELETE `/products/{productId}`) and should use `PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete`<br />
 Duplicate operations use **POST** method with ID specified (ex: POST `/products/{productId}/duplicate`) and should use `PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate`
 
-The operation follows the command: **PATCH** only when the command accepts partial data (optional setters, nullable parameters); when every parameter is required on each call the operation is a **PUT**, even when it only covers a part of the entity (ex: PUT `/products/{productId}/carriers`).<br />
+A **PUT** replaces the whole target of its URI: the entity, or a sub part replaced as a whole (ex: PUT `/products/{productId}/carriers` sets the complete list of carriers). Any other change of a part of an entity is a **PATCH**, even when its command requires every parameter (ex: PATCH `/carriers/{carrierId}/set-tax-rule-group`), unless a technical reason forces another method. A **PATCH** of the entity needs a command handler that applies only the fields sent: when the handler applies every field, the operation is a **PUT** until the core is fixed; when it only replaces every language of a localized field, the **PATCH** stays and its description says that all the languages must be sent.<br />
 A delete and a body-less action answer **204**; every other write returns the updated resource, read back through the query of the resource.<br />
 An operation receiving files uses **POST** with a `multipart/form-data` body, even when it updates: PHP only reads the files of a POST request. An update that may carry a file is therefore a multipart **POST**, partial or full like its command; when it is partial, a JSON **PATCH** on the same URI updates the fields without the file, which is left out of its input (a full update needs the file, so it has no JSON variant). A creation is a **POST** anyway: it accepts JSON, and multipart when a file is sent. In a multipart body the other fields are form fields: booleans are sent as `1` / `0`, nested values with the bracket syntax (ex: `names[en-US]=...`) or, from PrestaShop 9.2.0, as a JSON-encoded part.
 
@@ -88,9 +88,9 @@ Similar convention for list of IDs we use the domain and append `Ids` at the end
 
 - Bulk delete products: Method DELETE `/products/bulk-delete` with `productIds` parameter in request body (array of product IDs)
 - Bulk duplicate products: Method POST `/products/bulk-duplicate` with `productIds` parameter in request body (array of product IDs)
-- Bulk update status: Method PUT `/products/bulk-update-status` with `productIds` parameter in request body (array of product IDs)
+- Bulk update status: Method PATCH `/products/bulk-update-status` with `productIds` parameter in request body (array of product IDs)
 
-A bulk update is a **PUT**: its command needs the IDs and the value on every call (see HTTP methods). In case no HTTP method finds a consensus for the bulk operation, POST method is used by default.
+The method of a bulk operation follows the rules of the single item operations (see HTTP methods): a bulk update changing a part of each entity, like its status, is a **PATCH**, a **PUT** only replaces the whole target. In case no HTTP method finds a consensus for the bulk operation, POST method is used by default.
 
 The list of IDs is required (an empty body is a 422) and each ID is a positive integer (422 otherwise). When the handler collects the errors (PrestaShop 9.1.2, `AbstractBulkCommandHandler`), a partial failure answers **207 Multi-Status** with one error per failed ID. A bulk endpoint may take an option in the path (ex: DELETE `/categories/bulk-delete/{deleteMode}`).
 
